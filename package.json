@@ -1,0 +1,16 @@
+{
+  "name": "errors-and-promises",
+  "version": "1.0.0",
+  "description": "A pragmatist's guide to making and breaking promises",
+  "main": "server.js",
+  "repository": "https://github.com/garrettgsb/errors-and-promises.git",
+  "author": "Garrett <garrettgsb@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^6.2.0",
+    "ejs": "^2.6.1",
+    "express": "^4.16.4",
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.7"
+  }
+}

@@ -1,0 +1,26 @@
+.loaded {
+  background: #fff;
+  transition: 1.5s;
+}
+
+.loading {
+  background: #aaa;
+  transition: 0.5s;
+}
+
+.loading::before {
+  content: "⏳ Loading..."
+}
+
+.definitions > * {
+  animation: swoop 1s ease-out 1 running;
+}
+
+@keyframes swoop {
+  from {
+    transform: translate(-100%, 0);
+  }
+  to {
+    transform: translate(0, 0);
+  }
+}
