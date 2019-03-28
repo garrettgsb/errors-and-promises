@@ -2,7 +2,7 @@
 
 * Clone this repository: `git clone https://github.com/garrettgsb/errors-and-promises.git`
 * `yarn` or `npm install`
-* Create a file called `.env` in the project directory with the following keys:
+* Create a file called `.env` in the project directory with the following (fake) keys:
 
 ```
 OXFORD_ID=abcdefg
@@ -21,18 +21,24 @@ OXFORD_KEY=0a1b2c3d4e5f6g
 
 * Good errors are descriptive
 * Handle errors with try-catch, instead of letting them explode your app
+* When should errors occur?
+  - As soon as it's possible to know that something is wrong
 * Fail loud, fail early
+* If `throw new Error()` is too invasive, try `console.error` or `console.warn`
 
 **Asynchrony**
 
 * Nonblocking/Asynchronous:
-  - Walking and listening to music
-  - Reading and drinking coffee
-  - Event handlers: `onclick`, `onsubmit`
-  - Code that doesn't require other code to wait for it to finish
+  - Says "Don't wait for me" to other procedures
+  - Having a conversation while doing the dishes are asynchronous behaviors
+  - Event handlers are asynchronous: `onclick`, `onsubmit`
+  - API/database calls _should_ be asynchronous from the perspective of most of the app
 * Blocking/Synchronous:
+  - Says "Wait for me" to other procedures
   - Sneezing
   - Code that makes other code wait
+  - API/database calls should be synchronous from the perspective of the code that depends on the result
+* Promises, callbacks, etc. encapsulate the parts of a system that _must_ be synchronous (so that the rest can be asynchronous)
 
 **Promise Mechanics**
 
@@ -40,7 +46,7 @@ OXFORD_KEY=0a1b2c3d4e5f6g
     - API calls
     - Database queries
 
-  * Promises either resolve or reject, instead of returning
+  * Promises don't `return 'foo'`; Instead, they either `resolve('foo')` or `reject('foo')`
   * If it resolves: `.then()` receives the output and runs its callback
   * If it rejects: `.catch()` receives the output and runs its callback
   * `.then()` always returns a Promise
@@ -72,7 +78,7 @@ A bad error fails to give context about what is actually wrong.
 
 ![A bad error](readme-images/something-happened.png)
 
-## Try-Catch
+## Handling Errors with Try-Catch
 
 The "try-catch" pattern (and, in Javascript, language feature) is the bread and butter tool for error handling. It looks like this:
 
@@ -85,6 +91,8 @@ try {
 ```
 
 What this code says is "Try to do the thing in the first block. If that fails for some reason, instead of just terminating the application, do what it says in the second `catch` block. Pass the error along as `error`."
+
+With "try-catch", we can write code that tells the application how to behave when there is an error. In other words, instead of error just being a thing that happens, we can take control of how they are handled.
 
 ## Custom Errors
 
@@ -100,6 +108,38 @@ function singDuet(singers) {
   singers.forEach(singer => singer.sing());
 }
 ```
+
+**Documentation in Errors**
+
+> _Any fool can write code that a computer can understand. Good programmers write code that humans can understand._
+    - Kent Beck
+
+An important measure of code quality is how easy it is to understand the code's _intent_. One way to do that is by leaving comments:
+
+```
+function divide(a, b) {
+  // a and b must be numbers
+  // b can't be 0
+  return a / b;
+}
+```
+
+Those are helpful, and it's a good instinct to document those changes, but the problem is that the **comments are are divorced from the functionality of the code**. When possible, we should move the information contained in the comments into the code itself. One way to do this is with custom errors. Here is the same function, modified to be **self-documenting**:
+
+```
+function divide(a, b) {
+  if (typeof a !== 'number' || typeof b !== 'number') {
+    throw new Error(`Parameters to function 'divide' must be numbers. Received a: ${a} and b: ${b}.`);
+  }
+  if (b === 0) {
+    throw new Error("Function 'divide' cannot receive 0 as a second parameter.");
+  }
+  // b can't be 0
+  return a / b;
+}
+```
+
+If you find that it's a little too aggressive to crash the whole app when something like this goes wrong, try `console.error` or `console.warn`. They will give the loud appearance of an error in the console, but don't actually trigger the "catch or die" behavior of a real error.
 
 ### Custom Error Classes
 
@@ -136,7 +176,7 @@ console.log(`${diners[randomIndex]} will get the bill, which comes to ${totalBil
 
 It almost goes without saying that the flow goes line-by-line, in source order. But some code, by nature, can't be written in this way:
 
-A web server, for example, can't respond to an HTTP request at runtime-- It can only respond when the request is made.
+A web server, for example, can't respond to an HTTP request at initial runtime-- It can only respond when the request is made.
 
 Similarly, a user interface can't (or, at least, shouldn't) submit a form when the app first loads-- It should only do so in response to input from the user.
 
@@ -154,7 +194,9 @@ Javascript is, first and foremost, a language for adding interactivity to webpag
 
 And many more.
 
-As a result, Javascript was designed so that it would be easy to establish things that happen at the same time: Javascript can listen for a click _while_ validating an email address _while_ making several AJAX requests _while_ counting to 20, for example. Each of these activities needs to be **non-blocking:** That is, the rest of the app doesn't need to stop and wait for one thing to finish to carry on with the others.
+As a result, Javascript was designed so that it would be easy for many of these behavior chains to be running at the same time: Javascript can listen for a click _while_ validating an email address _while_ making several AJAX requests _while_ counting to 20, for example.
+
+For that to be possible, each of these activities needs to be **non-blocking:** That is, the rest of the app doesn't need to stop and wait for one thing to finish to carry on with the others.
 
 Most languages support this style of programming in some capacity. Not all of them are good at it.
 
@@ -170,13 +212,30 @@ This is the same sort of pattern that we use when writing asynchronous code: "Fi
 
 **Promises are a tool for enforcing dependencies in asynchronous systems**
 
-Although it's easy to create your own Promises, almost all of your time using them will be spent with _tools that return Promises_, like Knex. In Javascript, you can expect that **any time your application interacts with something outside** of the Node/browser process, a Promise is a likely interface for brokering that interaction. In web development, this is most usually either an **HTTP request** or a **database query**.
+Although it's simple to create your own Promises, almost all of your time using them will be spent with _tools that return Promises_, like Knex. In Javascript, you can expect that **any time your application interacts with something outside** of the Node/browser process, a Promise is a likely interface for brokering that interaction. In web development, this is most usually either an **HTTP request** or a **database query**.
 
-## Promise Mechanics
+There are three ways to think of Promises. From most to least abstract:
+
+* As a pattern
+* As a language feature
+* As the thing you use to make API/database calls
+
+## Philosophy: Promises as a pattern
+
+Promises are an agreement to hand off control to another process, and a plan for what to do when you get it back again.
+
+Promises allow you to serialize dependent behaviors, instead of nesting them (as is done with conventional callbacks). This allows a cleaner interface between procedures: Each step does its job, then passes on a result.
+
+## Mechanics: Promises as a Language Feature
 
 ### From the outside
 
-At the very least, you will add a `.then()` to a Promise. The `.then()` receives a callback function, and that function receives the result of the Promise as a parameter. Confused? How about an example:
+At its simplest, programming a synchronous dependency chain with a Promise looks like this:
+
+**Step 1:** Invoke a function that returns a Promise
+**Step 2:** Call `.then()` on the return value
+**Step 3:** Pass `.then()` a callback function that receives one parameter: A result
+**Step 4:** Do stuff with the result _inside_ of the callback
 
 ```
 getUsers().then(result => console.log("All of the users:", result));
@@ -201,7 +260,15 @@ getUsers()
   .then(admins => console.log('Admins:', admins));
 ```
 
-If a Promise rejects instead of resolving, or if there are any errors in the chain, then the function passed to `.catch()` will run, receiving the error as a parameter. Oh yeah, you should have a `.catch()` by the way.
+Note that we don't need to know how `getUsers` works, other than that it returns a Promise. **All Promises have the same interface:** Pass my result along to the next `.then()`.
+
+**Dealing with Errors**
+
+It is a good idea to add one more step to the workflow above, to handle anything going wrong:
+
+**Step 5:** Add a `.catch()` with a callback function to handle any errors
+
+If a Promise rejects instead of resolving, or if there are any errors in the chain, then the function passed to `.catch()` will run, receiving the error as a parameter.
 
 ```
 doSomethingDangerous()
@@ -257,7 +324,22 @@ const city = "Vancouver";
 getWeatherFor(city).then(result => console.log(`It's gonna be ${result}-y out!`));
 ```
 
-## Advanced Promise Features
+# Example: Using Promises with Goodwords
+
+Goodwords follows this workflow:
+  * **Client:** A button is listening for clicks
+  * **Client:** When clicked, it reads the value of an input field
+  * **Client:** A `fetch` request is made with that value
+  * **Server:** Express receives the request to the `/words/:word` endpoint
+  * **Server:** The word is pulled from the URL params
+  * **Server:** An API request is made to the Oxford Dictionary API (`lookupWord()`)
+  * **Oxford API:** Does something-- who knows what?-- and returns a response
+  * **Server:** Sends the response from the Oxford API back to the client
+  * **Client:** Parses the response for definitions, and renders them onto the page (`handleOxfordResponse()`, `renderDefinition()`)
+
+In this workflow, where would we expect to find Promises? Where is control handed off?
+
+## Appendix A: Advanced Promise Features
 
 * `Promise.all` - Receives an array of Promises; Doesn't run `.then()` until they've all resolved or rejected
   - Treat _many_ Promises like _one_ Promise
@@ -265,3 +347,20 @@ getWeatherFor(city).then(result => console.log(`It's gonna be ${result}-y out!`)
 * `Promise.race` - Runs `.then()` as soon as _one_ of the Promises resolve
   - Useful for a _single_ dependency that can be satisfied in _multiple ways_
   - e.g. Asking 3 different weather APIs what temperature it is outside
+
+
+# Appendix A: Fetch crash course
+
+Fetch is built into your browser. It allows you to make HTTP requests with Promises, and is far simpler than the other built-in browser tools. There is one very conspicuous weird thing, but if you can get over it, Fetch is outstandingly handy.
+
+A basic fetch request works like this:
+
+```
+fetch('www.website.com')
+.then(stream => stream.json())
+.then(actualResult => console.log(actualResult))
+```
+
+For some reason, the folks who developed `fetch` decided that you need to process the stream yourself in the first `.then()`-- It isn't the readable result yet. Usually, you just want to turn it into JSON, as above.
+
+Fetch isn't just for simple GET requests-- You can do all sorts of more complicated things with it, including POST requests. [MDN really wants to tell you more about that](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch).
