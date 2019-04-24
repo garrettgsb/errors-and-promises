@@ -10,7 +10,7 @@ OXFORD_KEY=0a1b2c3d4e5f6g
 ```
 
 * Sign up with Oxford Dictionaries to be given your own API credentials: https://developer.oxforddictionaries.com/
-* Put those credentials in your `.env` file
+* Replace the fake credentials in your `.env` file with those credentials
 
 * Start the server: `node server.js`
 * Point your favorite browser to `localhost:8080`
@@ -30,14 +30,13 @@ OXFORD_KEY=0a1b2c3d4e5f6g
 
 * Nonblocking/Asynchronous:
   - Says "Don't wait for me" to other procedures
-  - Having a conversation while doing the dishes are asynchronous behaviors
   - Event handlers are asynchronous: `onclick`, `onsubmit`
   - API/database calls _should_ be asynchronous from the perspective of most of the app
 * Blocking/Synchronous:
   - Says "Wait for me" to other procedures
-  - Sneezing
   - Code that makes other code wait
   - API/database calls should be synchronous from the perspective of the code that depends on the result
+* Javascript is an inherently asynchronous language
 * Promises, callbacks, etc. encapsulate the parts of a system that _must_ be synchronous (so that the rest can be asynchronous)
 
 **Promise Mechanics**
