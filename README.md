@@ -50,13 +50,14 @@ OXFORD_KEY=0a1b2c3d4e5f6g
   * If it rejects: `.catch()` receives the output and runs its callback
   * `.then()` always returns a Promise
     - Which means that you're never _really_ getting out of Promise Land
+      * And you shouldn't want to 💁‍♂️
 
 **Designing With Promises**
 
 * Asynchrony with Promises is not too different from asynchrony with callbacks
-* Promises organize code into dependency sequences
-* BAD: "Go into a Promise, bring the value out at the end"
-* GOOD: "Go into a Promise, execute the desired behavior at the end"
+* Promises organize code into **dependency sequences**
+* BAD: "Go into a Promise chain, bring the value out at the end"
+* GOOD: "Go into a Promise chain, execute the desired behavior at the end"
 
 **Advanced Promising**
   * `Promise.all` - Receives an array of Promises; Doesn't run `.then()` until they've all resolved or rejected
@@ -77,6 +78,12 @@ A bad error fails to give context about what is actually wrong.
 
 ![A bad error](readme-images/something-happened.png)
 
+Throwing an error is kind of like throwing a ball, but it's also kind of like throwing a tantrum: The error travels up the call stack, looking for something that can handle it, like a retail customer who keeps asking to speak with everybody's manager.
+
+If the error makes its way all the way up to the root process-- the Node/browser runtime-- then the app crashes.
+
+Errors are useful and descriptive, but having our app self-destruct every time somebody spills a glass of water seems like a steep trade-off. But we don't have to live with a gun to our heads like that-- that's where **error handling** comes in.
+
 ## Handling Errors with Try-Catch
 
 The "try-catch" pattern (and, in Javascript, language feature) is the bread and butter tool for error handling. It looks like this:
@@ -89,15 +96,29 @@ try {
 }
 ```
 
-What this code says is "Try to do the thing in the first block. If that fails for some reason, instead of just terminating the application, do what it says in the second `catch` block. Pass the error along as `error`."
+What this code says is "Try to do the thing in the first block. If that fails for some reason, instead of just terminating the application, do what it says in the second `catch` block (and pass the error along in a variable called `error`)."
 
-With "try-catch", we can write code that tells the application how to behave when there is an error. In other words, instead of error just being a thing that happens, we can take control of how they are handled.
+With "try-catch", we can write code that tells the application how to behave when there is an error. In other words, instead of errors just being a snag for our app to faceplant on, we can take control of how they are handled.
 
 ## Custom Errors
 
 **Fail loud, fail early**
 
-Sometimes, you want errors to occur even though nothing has gone wrong as far as the Javascript interpreter is concerned. For that, we can create a `new Error` and `throw` it:
+Sometimes, you want errors to occur even though nothing has gone wrong as far as the Javascript interpreter is concerned. For that, we can use the `throw` keyword:
+
+```
+function eatAvocado(condiments) {
+  if (condiments.includes('ketchup')) {
+    throw "Ew don't."
+  }
+}
+```
+
+A line that begins with the `throw` keyword will have the same behavior as an error thrown by the interpreter: The error will bubble up until it either hits a `try`-`catch` block, or crash the app if it reaches the top of the call stack.
+
+Speaking of the call stack though, where is that? Don't errors usually tell us more about where the error occurred?
+
+Yes they do-- But in the example above, we didn't throw an _error_, we just threw a _string_. To see the full call stack (and get [some other fun features](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error)), we want to throw a new instance of an Error object:
 
 ```
 function singDuet(singers) {
@@ -138,7 +159,7 @@ function divide(a, b) {
 }
 ```
 
-If you find that it's a little too aggressive to crash the whole app when something like this goes wrong, try `console.error` or `console.warn`. They will give the loud appearance of an error in the console, but don't actually trigger the "catch or die" behavior of a real error.
+If you find that it's a little too aggressive to crash the whole app when something like this goes wrong, try `console.error` or `console.warn`. They will give the loud appearance of an error in the console, but won't actually trigger the "catch or die" behavior of a thrown error.
 
 ### Custom Error Classes
 
@@ -155,6 +176,14 @@ class TooManySingersError extends Error {
 ```
 
 To be clear: This is not a very common thing to do in application code, so we won't spend too long on it.
+
+## Errors Summary
+
+* `try`-`catch` to recover from errors
+* `throw new Error('message')` to create errors
+* Fail loud, fail early
+* Constraints are good
+* Document behavior and intent-- Comments are good, code is better.
 
 # Procedural Programming and its Shortcomings
 
@@ -173,9 +202,9 @@ const randomIndex = Math.floor(Math.random() * diners.length);
 console.log(`${diners[randomIndex]} will get the bill, which comes to ${totalBill * (1 + taxRate)}, plus the tip.`);
 ```
 
-It almost goes without saying that the flow goes line-by-line, in source order. But some code, by nature, can't be written in this way:
+It almost goes without saying that when the script is run, it flows line-by-line in source order until it finishes, and then exits gracefully. But some code, by nature, can't be written in this way:
 
-A web server, for example, can't respond to an HTTP request at initial runtime-- It can only respond when the request is made.
+A web server, for example, can't respond to an HTTP request at initial runtime-- It can only respond when a request is made.
 
 Similarly, a user interface can't (or, at least, shouldn't) submit a form when the app first loads-- It should only do so in response to input from the user.
 
@@ -185,15 +214,15 @@ When we are solving problems like building web servers or user interfaces, we ar
 
 Javascript is, first and foremost, a language for adding interactivity to webpages. To program an interactive webpage is to establish behaviors that occur in response to a trigger. Triggers can be all sorts of things:
 
-* The page loads
+* The page loads (`$(document).ready(...)`)
 * The user clicks somewhere
 * A timer expires
 * An HTTP response is received
 * The value of an input field changes
 
-And many more.
+And many more. In front end web development, defining responses to these behaviors is the whole game.
 
-As a result, Javascript was designed so that it would be easy for many of these behavior chains to be running at the same time: Javascript can listen for a click _while_ validating an email address _while_ making several AJAX requests _while_ counting to 20, for example.
+As a result, Javascript was designed so that it would be easy for many of these behavior chains to be running at the same time: Javascript can listen for a click _while_ validating an email address _while_ making a dozen AJAX requests _while_ counting to 20, _while_ animating a menu unrolling across the screen, for example.
 
 For that to be possible, each of these activities needs to be **non-blocking:** That is, the rest of the app doesn't need to stop and wait for one thing to finish to carry on with the others.
 
@@ -205,13 +234,13 @@ Mastering asynchrony is a matter of mastering **dependencies**. You might say th
 
 Some real-world dependencies are obvious: Getting on a bus is dependent on the bus arriving, for example. "First, wait for the bus to arrive. Then, get on the bus."
 
-This is the same sort of pattern that we use when writing asynchronous code: "First, wait for the HTTP response. Then, render that data on the page." The HTTP response is a dependency of the render behavior, so the code must enforce the correct order of operations. That's what Promises are for!
+This is the same sort of pattern that we use when writing asynchronous code: "First, wait for the HTTP response. Then, use the data from the response to build an HTML object." To render the data before it's received is nonsense-- The "build" step is dependent on the "receive" step, so the code must enforce the correct order of operations. That's what Promises are for!
 
 # Promises
 
 **Promises are a tool for enforcing dependencies in asynchronous systems**
 
-Although it's simple to create your own Promises, almost all of your time using them will be spent with _tools that return Promises_, like Knex. In Javascript, you can expect that **any time your application interacts with something outside** of the Node/browser process, a Promise is a likely interface for brokering that interaction. In web development, this is most usually either an **HTTP request** or a **database query**.
+Although it's simple to create your own Promises, almost all of your time using them will be spent with _tools that return Promises_, like Knex, or the `fetch` API built into the browser. In Javascript, you can expect that **any time your application interacts with something outside** of the Node/browser process, a Promise is a likely interface for brokering that interaction. In web development, this is most usually either an **HTTP request** or a **database query**.
 
 There are three ways to think of Promises. From most to least abstract:
 
@@ -250,12 +279,12 @@ function logUsers(users) {
 getUsers().then(logUsers);
 ```
 
-Any value that is returned from a `.then()` is, itself, a Promise. As a result, we can chain `.then()` calls as much as we want:
+Any value that is returned from a `.then()` is, itself, a Promise, even if its value isn't some spooky asynchronous thing. As a result, we can chain `.then()` calls as many times as we want:
 
 ```
 getUsers()
   .then(users => user.map(user => user.id))
-  .then(userIds => return adminFilter(userIds))
+  .then(userIds => adminFilter(userIds))
   .then(admins => console.log('Admins:', admins));
 ```
 
@@ -263,7 +292,7 @@ Note that we don't need to know how `getUsers` works, other than that it returns
 
 **Dealing with Errors**
 
-It is a good idea to add one more step to the workflow above, to handle anything going wrong:
+It is a good idea to add one more step to the workflow above, to handle anything that goes wrong:
 
 **Step 5:** Add a `.catch()` with a callback function to handle any errors
 
@@ -283,16 +312,16 @@ A Promise can have three states:
 * Resolved
 * Rejected
 
-When a Promise is first created, it is in the Pending state. The code inside of it runs, and **instead of `return`ing something**, it will either call a function called `resolve()` or a function called `reject()`. If `resolve()` is called, then the parameter that it is passed is given to the first `.then()` call. If `reject()` is called, then the parameter that it receives is passed to the first `.catch()` call. A (fairly pointless) custom Promise might look something like this:
+When a Promise is first created, it is in the Pending state. The code inside of it runs, and **instead of `return`ing something**, it will either call a function called `resolve()` or a function called `reject()`. If `resolve()` is called, then the parameter that it is passed is given to the next `.then()` call in the chain. If `reject()` is called, then the parameter that it receives is passed to the first `.catch()` call. A (fairly pointless) custom Promise that implements a coin flip might look something like this:
 
 ```
 new Promise((resolve, reject) => {
   if (Math.random() > 0.5) {
-    resolve("Horray!");
+    resolve("Heads 🗣");
   } else {
-    reject("Noooo!");
+    reject("Tails 🦆");
   }
-}).then(result => console.log("Then:", result)).catch(error => console.error("Catch:", error));
+}).then(result => console.log("Should be heads:", result)).catch(error => console.error("Should be tails:", error));
 ```
 
 ## Designing With Promises
@@ -305,7 +334,7 @@ const weather = getWeatherFor(city).then(result => return result);
 console.log(`It's gonna be ${weather}-y out!`);
 ```
 
-Or even like this (which _could_ actually work, by accident):
+Or even like this (although this _could_ actually work, by accident):
 
 ```
 const city = "Vancouver";
@@ -322,6 +351,17 @@ So your Promise code should look like this instead:
 const city = "Vancouver";
 getWeatherFor(city).then(result => console.log(`It's gonna be ${result}-y out!`));
 ```
+
+### What if I need data outside of the Promise?
+
+Okay, so realistically, sometimes you're going to want the result of a Promise to be available to code that is not inside of the Promise chain. We can use normal scoping rules to make this possible:
+
+```
+let user;
+getUser().then(result => user = result;).catch(error => throw error);
+```
+
+**⚠️ WARNING:** If you're going to take this approach, then your application must know how to behave if `user` is undefined, not defined, null, empty, or otherwise not there. For more on how to do this, reach out to your favorite mentor.
 
 # Example: Using Promises with Goodwords
 
